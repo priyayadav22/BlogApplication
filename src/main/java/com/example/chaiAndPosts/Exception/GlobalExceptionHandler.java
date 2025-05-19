@@ -27,9 +27,34 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoChangeDetectedException.class)
     public ResponseEntity<Map<String, String>> handleNoChange(NoChangeDetectedException ex) {
         Map<String, String> error = new HashMap<>();
-        error.put("message", ex.getMessage());
+        error.put("errorMessage", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<?> handleInvalidCredentials(InvalidCredentialsException ex) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("errorMessage", ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AppException.class)
+    public ResponseEntity<Map<String, String>> handleAppException(AppException ex) {
+        HttpStatus status;
+
+        switch (ex.getType()) {
+            case "Unauthorized":
+                status = HttpStatus.FORBIDDEN;
+                break;
+            case "NotFound":
+                status = HttpStatus.NOT_FOUND;
+                break;
+            // Add more custom types as needed
+            default:
+                status = HttpStatus.BAD_REQUEST;
+        }
+        return ResponseEntity.status(status)
+                .body(Map.of("errorMessage", ex.getMessage()));
+    }
 
 }

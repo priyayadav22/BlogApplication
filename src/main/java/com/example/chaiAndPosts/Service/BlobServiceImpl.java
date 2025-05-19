@@ -1,14 +1,19 @@
 package com.example.chaiAndPosts.Service;
 
+import com.example.chaiAndPosts.DTO.PostRequest;
 import com.example.chaiAndPosts.DTO.UpdatePostRequest;
+import com.example.chaiAndPosts.Exception.AppException;
 import com.example.chaiAndPosts.Exception.DuplicateTitleException;
 import com.example.chaiAndPosts.Exception.NoChangeDetectedException;
 import com.example.chaiAndPosts.Repository.BlobRepository;
+import com.example.chaiAndPosts.Repository.UserRepository;
 import com.example.chaiAndPosts.entity.Post;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import com.example.chaiAndPosts.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,14 +23,28 @@ public class BlobServiceImpl implements BlobService{
     @Autowired
     private BlobRepository blobRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @Override
-    public Post createPost(Post post){
-        Optional<Post> existingPost = blobRepository.findByTitle(post.getTitle());
+    public Post createPost(PostRequest postRequest){
+        User user = userRepository.findByUsername(postRequest.getUsername())
+                .orElseThrow(() -> new AppException("NotFound", "User not found"));
+
+        Optional<Post> existingPost = blobRepository.findByTitle(postRequest.getTitle());
         if(existingPost.isPresent()){
-            throw new DuplicateTitleException("A post with this title already Exist");
+            throw new DuplicateTitleException("A post with this title already exists");
         }
+
+        Post post = new Post();
+        post.setTitle(postRequest.getTitle());
+        post.setContent(postRequest.getContent());
+        post.setUser(user);  // set creator user
+        post.setCreatedAt(LocalDateTime.now());
+        post.setLastUpdated(LocalDateTime.now());
         return blobRepository.save(post);
     }
+
 
     @Override
     public List<Post> getAllPosts(){
@@ -38,13 +57,21 @@ public class BlobServiceImpl implements BlobService{
     }
 
     @Override
-    public void deletePost(Long id){
+    public void deletePost(Long id, String username){
+        Post post = blobRepository.findById(id).orElseThrow(() -> new RuntimeException("No Blog Found!"));
+        if (!post.getUser().getUsername().equals(username)) {
+            throw new AppException("Unauthorized", "You are not authorized to update this post");
+        }
         blobRepository.deleteById(id);
     }
 
     @Override
-    public Post updatePost(Long id, UpdatePostRequest request){
+    public Post updatePost(Long id, UpdatePostRequest request, String username){
         Post post = blobRepository.findById(id).orElseThrow(() -> new RuntimeException("No Blog Found!"));
+
+        if (!post.getUser().getUsername().equals(username)) {
+            throw new AppException("Unauthorized", "You are not authorized to update this post");
+        }
 
         boolean updated = false;
         if(request.getTitle()!= null && !request.getTitle().isBlank()  && !request.getTitle().equals(post.getTitle()))
@@ -61,6 +88,7 @@ public class BlobServiceImpl implements BlobService{
         if (!updated) {
             throw new NoChangeDetectedException("No changes detected As Post is already up to date.");
         }
+        post.setLastUpdated(LocalDateTime.now());
         return blobRepository.save(post);
     }
 

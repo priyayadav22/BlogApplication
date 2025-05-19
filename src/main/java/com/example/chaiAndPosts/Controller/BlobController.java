@@ -1,5 +1,6 @@
 package com.example.chaiAndPosts.Controller;
 
+import com.example.chaiAndPosts.DTO.PostRequest;
 import com.example.chaiAndPosts.DTO.UpdatePostRequest;
 import com.example.chaiAndPosts.Service.BlobService;
 import com.example.chaiAndPosts.entity.Post;
@@ -17,8 +18,8 @@ public class BlobController {
     private BlobService blobService;
 
     @PostMapping
-    public Post createBlog(@RequestBody Post post){
-        return blobService.createPost(post);
+    public Post createBlog(@RequestBody PostRequest request){
+        return blobService.createPost(request);
     }
 
     @GetMapping
@@ -32,14 +33,14 @@ public class BlobController {
     }
 
     @PutMapping("/{id}")
-    public Post updatePost(@PathVariable Long id, @RequestBody UpdatePostRequest request) {
-       Post updated=  blobService.updatePost(id, request);
+    public Post updatePost(@PathVariable Long id, @RequestBody UpdatePostRequest request,@RequestParam String username) {
+       Post updated=  blobService.updatePost(id, request, username);
        return ResponseEntity.ok(updated).getBody();
     }
 
     @DeleteMapping("/{id}")
-    public void deletePost(@PathVariable Long id) {
-        blobService.deletePost(id);
+    public void deletePost(@PathVariable Long id,@RequestParam String username) {
+        blobService.deletePost(id, username);
     }
 
     @PostMapping("/{id}/upvote")
